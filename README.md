@@ -27,6 +27,16 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
+### Setup (macOS / Linux)
+```bash
+cd "/path/to/SurfaceGaurd"
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -U pip
+pip install -r requirements.txt
+pip install -e .
+```
+
 ### Dataset: MVTec AD
 Download MVTec AD manually and place it like:
 
@@ -74,6 +84,12 @@ python tools\infer.py --method patchcore --category bottle --image "path\to\imag
 .\scripts\run_app.ps1
 ```
 
+macOS / Linux:
+
+```bash
+streamlit run app/Home.py
+```
+
 ### Run (PowerShell helper scripts)
 These assume your venv is in `.\.venv\`:
 
@@ -81,5 +97,15 @@ These assume your venv is in `.\.venv\`:
 .\scripts\train_patchcore.ps1 -Category bottle
 .\scripts\eval_patchcore.ps1  -Category bottle
 .\scripts\eval_winclip.ps1    -Category bottle
+```
+
+### Trained artifacts (Git LFS)
+The trained PatchCore memories (`outputs/patchcore/**/memory.npz`) are large binary files and should be stored with **Git LFS**.
+
+If you clone this repo, make sure Git LFS is installed and enabled before pulling:
+
+```bash
+git lfs install
+git lfs pull
 ```
 

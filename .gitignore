@@ -4,7 +4,12 @@
 **/*.pyc
 
 /data/
-/outputs/
+# Default: ignore generated artifacts
+/outputs/*
+
+# Keep trained model artifacts (tracked via Git LFS)
+!outputs/patchcore/
+!outputs/patchcore/**
 
 /.streamlit/
 .DS_Store
