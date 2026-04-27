@@ -1,0 +1,6 @@
+app:
+  outputs_dir: outputs
+  default_dataset_root: data/mvtec_ad
+  default_category: bottle
+  default_method: patchcore
+

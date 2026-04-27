@@ -1,0 +1,30 @@
+data:
+  dataset: mvtec_ad
+  root: data/mvtec_ad
+  image_size: 224
+  normalize: clip
+
+winclip:
+  model: ViT-B-32
+  pretrained: laion2b_s34b_b79k
+  window:
+    size: 224
+    stride: 112
+  prompts:
+    normal:
+      - "a photo of a clean {category}"
+      - "a photo of a normal {category}"
+      - "a high quality photo of a pristine {category}"
+    anomalous:
+      - "a photo of a defective {category}"
+      - "a photo of a damaged {category}"
+      - "a photo of an anomalous {category}"
+
+eval:
+  batch_size: 8
+  num_workers: 2
+
+outputs:
+  dir: outputs
+  winclip_dir: outputs/winclip
+

@@ -1,0 +1,27 @@
+data:
+  dataset: mvtec_ad
+  root: data/mvtec_ad
+  image_size: 256
+  normalize: imagenet
+
+patchcore:
+  backbone: wide_resnet50_2   # torchvision model name
+  layer: layer3              # feature map layer: layer2/layer3
+  embedding_dim: 1024        # inferred; kept for clarity
+  coreset_fraction: 0.1      # 10% of patches kept
+  coreset_method: auto       # auto|random|kcenter
+  patches_per_image: 2000    # subsample patches per train image (speed)
+  max_patch_samples: 200000  # cap total patch pool before coreset
+  nn_k: 1
+  image_score: max           # max | topk_mean
+  topk: 50
+
+train:
+  batch_size: 8
+  num_workers: 2
+  seed: 42
+
+outputs:
+  dir: outputs
+  patchcore_dir: outputs/patchcore
+
