@@ -1,0 +1,17 @@
+category: pill
+backbone: wide_resnet50_2
+layer: layer3
+image_size: 256
+nn_k: 1
+image_score: max
+topk: 50
+coreset_fraction: 0.1
+coreset_method: random
+max_patch_samples: 200000
+patches_per_image: 2000
+threshold: 0.702606505877821
+train_score_mean: 0.5804138902421301
+train_score_std: 0.04073087187856363
+num_train_images: 267
+num_memory_patches: 6835
+patch_dim: 1024

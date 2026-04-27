@@ -1,0 +1,17 @@
+category: screw
+backbone: wide_resnet50_2
+layer: layer3
+image_size: 256
+nn_k: 1
+image_score: max
+topk: 50
+coreset_fraction: 0.1
+coreset_method: random
+max_patch_samples: 200000
+patches_per_image: 2000
+threshold: 0.7217726304457485
+train_score_mean: 0.5593419912271201
+train_score_std: 0.054143546406209435
+num_train_images: 320
+num_memory_patches: 8192
+patch_dim: 1024

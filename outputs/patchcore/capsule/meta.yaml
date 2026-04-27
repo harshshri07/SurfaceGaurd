@@ -1,0 +1,17 @@
+category: capsule
+backbone: wide_resnet50_2
+layer: layer3
+image_size: 256
+nn_k: 1
+image_score: max
+topk: 50
+coreset_fraction: 0.1
+coreset_method: random
+max_patch_samples: 200000
+patches_per_image: 2000
+threshold: 0.7958578942138403
+train_score_mean: 0.524209589174349
+train_score_std: 0.09054943501316376
+num_train_images: 219
+num_memory_patches: 5606
+patch_dim: 1024
