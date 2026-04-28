@@ -29,4 +29,5 @@ src/surfaceguard/ui/model_cache.py
 src/surfaceguard/utils/config.py
 src/surfaceguard/utils/device.py
 src/surfaceguard/utils/io.py
+src/surfaceguard/utils/repro.py
 src/surfaceguard/utils/seed.py
