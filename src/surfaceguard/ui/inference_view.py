@@ -34,23 +34,26 @@ def render_inference_page(title: str = "Inference") -> None:
     with st.sidebar:
         st.subheader("Settings")
         method = st.selectbox("Method", ["patchcore", "winclip"], index=0)
-        outputs_dir = st.text_input("Outputs dir", value=st.session_state.get("outputs_dir", "outputs"))
+        outputs_dir = st.session_state.get("outputs_dir", "outputs")
+        category = "auto"
+        with st.expander("Advanced", expanded=False):
+            outputs_dir = st.text_input("Outputs dir", value=outputs_dir)
+            if method == "patchcore":
+                trained_for_advanced = _trained_patchcore_categories(outputs_dir)
+                if trained_for_advanced:
+                    category = st.selectbox("Force category", ["auto"] + trained_for_advanced, index=0)
+            else:
+                category = st.text_input("Prompt hint (optional)", value="auto")
+        st.session_state["outputs_dir"] = outputs_dir
         trained = _trained_patchcore_categories(outputs_dir)
         if method == "patchcore":
             if trained:
-                category = "auto"
                 st.caption("PatchCore runs per-category checkpoints from outputs/patchcore/<category>/")
-                with st.expander("Advanced (optional)", expanded=False):
-                    category = st.selectbox("Force category", ["auto"] + trained, index=0)
             else:
-                category = "auto"
                 st.warning("No PatchCore checkpoints found. Train first (example): python tools\\train_patchcore.py --category bottle")
         else:
             # Keep UX simple: category is optional for WinCLIP; default to category-agnostic prompts.
-            category = "auto"
             st.caption("WinCLIP is training-free; category is optional (auto uses generic prompts).")
-            with st.expander("Advanced (optional)", expanded=False):
-                category = st.text_input("Prompt hint (optional)", value="auto")
             quality = st.selectbox("WinCLIP localization quality", ["fast", "balanced", "best"], index=1)
             if quality == "fast":
                 win_stride, blur_sigma = 112, 0.0
