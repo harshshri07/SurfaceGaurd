@@ -21,6 +21,7 @@ from surfaceguard.models.patchcore.core import (
 )
 from surfaceguard.utils.device import get_device
 from surfaceguard.utils.io import ensure_dir, save_npz
+from surfaceguard.utils.provenance import get_git_commit_short, stable_cfg_hash
 from surfaceguard.utils.seed import seed_everything
 
 
@@ -131,6 +132,8 @@ def train_patchcore_for_category(cfg: Dict[str, Any], category: str) -> str:
     # 4) Save checkpoint
     out_dir = ensure_dir(_as_abs_outputs(cfg) / category)
     save_npz(out_dir / "memory.npz", memory=memory.astype(np.float32))
+    cfg_hash = stable_cfg_hash(cfg)
+    git_commit = get_git_commit_short()
     meta = {
         "category": category,
         "backbone": backbone,
@@ -149,6 +152,8 @@ def train_patchcore_for_category(cfg: Dict[str, Any], category: str) -> str:
         "num_train_images": len(ds),
         "num_memory_patches": int(memory.shape[0]),
         "patch_dim": int(memory.shape[1]),
+        "config_hash": cfg_hash,
+        "git_commit": git_commit,
     }
 
     import yaml

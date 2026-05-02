@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+**/__pycache__/
+*.pyc
+
+# Local envs
+.venv/
+.env
+
+# Datasets and caches
+data/
+.cache/
+**/.cache/
+
+# Streamlit local state
+.streamlit/
+
+# Git and editor noise
+.git/
+.DS_Store
+
+# Keep LFS-trained PatchCore artifacts in the image by default,
+# so the container can run inference without extra setup.
+# (If you want a slim image, remove the next line to ignore outputs entirely.)
+!outputs/patchcore/**
+

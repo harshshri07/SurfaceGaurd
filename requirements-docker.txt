@@ -1,0 +1,18 @@
+numpy
+scipy
+pandas
+tqdm
+pyyaml
+pillow
+opencv-python
+matplotlib
+scikit-learn
+scikit-image
+
+# torch + torchvision are installed explicitly in Docker (CPU wheels)
+timm
+
+streamlit
+
+open_clip_torch
+

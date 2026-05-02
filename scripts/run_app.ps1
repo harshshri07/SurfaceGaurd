@@ -1,4 +1,5 @@
-Set-Location -LiteralPath (Split-Path -Parent $MyInvocation.MyCommand.Path)\..
+$repoRoot = Resolve-Path (Join-Path (Split-Path -Parent $PSCommandPath) "..")
+Set-Location -LiteralPath $repoRoot
 
 if (!(Test-Path ".\.venv\Scripts\Activate.ps1")) {
   Write-Error "No venv found. Create it: python -m venv .venv"
@@ -6,5 +7,5 @@ if (!(Test-Path ".\.venv\Scripts\Activate.ps1")) {
 }
 
 & .\.venv\Scripts\Activate.ps1
-streamlit run app\Home.py
+& .\.venv\Scripts\python.exe -m streamlit run app\Home.py
 
