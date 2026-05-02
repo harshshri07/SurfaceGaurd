@@ -74,9 +74,15 @@ Evaluate WinCLIP:
 python tools\eval.py --config configs\winclip_mvtec.yaml --method winclip --category bottle
 ```
 
+Benchmark all categories (writes per-category reports + an aggregated summary JSON under `outputs/reports/`):
+```powershell
+.\scripts\benchmark_all.ps1 -Method patchcore -Categories all
+.\scripts\benchmark_all.ps1 -Method winclip   -Categories all
+```
+
 Single-image inference:
 ```powershell
-python tools\infer.py --method patchcore --category bottle --image "path\to\image.png" --save_overlay
+python tools\infer.py --method patchcore --category bottle --image "path/to/image.png" --save_overlay
 ```
 
 ### Run (UI)
@@ -107,5 +113,26 @@ If you clone this repo, make sure Git LFS is installed and enabled before pullin
 ```bash
 git lfs install
 git lfs pull
+```
+
+### Provenance
+Training checkpoints (`outputs/patchcore/**/meta.yaml`) and evaluation reports (`outputs/reports/*.json`) include:
+- `config_hash`: stable hash of the YAML config contents
+- `git_commit`: short git commit id (when available)
+
+### Docker (one-command run)
+The Streamlit UI is fully containerized. It includes all Python dependencies and (by default) the trained PatchCore artifacts under `outputs/patchcore/` so inference works immediately.
+
+Windows PowerShell:
+
+```powershell
+.\scripts\run_docker.ps1
+```
+
+Or manually:
+
+```powershell
+docker build -t surfaceguard:latest .
+docker run --rm -p 8501:8501 surfaceguard:latest
 ```
 

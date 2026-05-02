@@ -14,6 +14,7 @@ from surfaceguard.eval.metrics import au_pro, best_f1_at_threshold, image_level_
 from surfaceguard.models.patchcore.api import PatchCoreModel
 from surfaceguard.models.winclip.api import WinCLIPModel
 from surfaceguard.utils.io import ensure_dir
+from surfaceguard.utils.provenance import get_git_commit_short, stable_cfg_hash
 
 
 def _load_model(method: str, outputs_dir: Path, category: str):
@@ -67,6 +68,8 @@ def eval_method_for_category(cfg: Dict[str, Any], method: str, category: str) ->
 
     y_true_arr = np.array(y_true, dtype=np.uint8)
     y_score_arr = np.array(y_score, dtype=np.float32)
+    cfg_hash = stable_cfg_hash(cfg)
+    git_commit = get_git_commit_short()
 
     report: Dict[str, Any] = {
         "method": method,
@@ -74,6 +77,8 @@ def eval_method_for_category(cfg: Dict[str, Any], method: str, category: str) ->
         "num_test": int(len(y_true)),
         "image_auroc": image_level_auroc(y_true_arr, y_score_arr),
         "best_f1": best_f1_at_threshold(y_true_arr, y_score_arr),
+        "config_hash": cfg_hash,
+        "git_commit": git_commit,
     }
 
     if masks:

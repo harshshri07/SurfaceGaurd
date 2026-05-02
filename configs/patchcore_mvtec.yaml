@@ -1,6 +1,6 @@
 data:
   dataset: mvtec_ad
-  root: src/surfaceguard/data/mvtec_ad
+  root: data/mvtec_ad
   image_size: 256
   normalize: imagenet
 
