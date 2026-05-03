@@ -1,0 +1,18 @@
+numpy
+scipy
+pandas
+tqdm
+pyyaml
+pillow
+# Headless OpenCV for server/container environments
+opencv-python-headless
+matplotlib
+scikit-learn
+scikit-image
+
+# torch + torchvision are installed explicitly in Docker (CPU wheels)
+timm
+
+streamlit
+open_clip_torch
+huggingface_hub>=0.23
