@@ -4,6 +4,7 @@ import io
 import hashlib
 import os
 import zipfile
+import gc
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -13,6 +14,26 @@ import streamlit as st
 
 from surfaceguard.eval.visualize import overlay_heatmap, threshold_mask
 from surfaceguard.ui.model_cache import load_patchcore_model, load_winclip_model
+
+
+def _release_model_memory() -> None:
+    """Best-effort memory release for constrained runtimes (e.g. HF Spaces)."""
+    try:
+        load_patchcore_model.clear()
+    except Exception:
+        pass
+    try:
+        load_winclip_model.clear()
+    except Exception:
+        pass
+    gc.collect()
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    except Exception:
+        pass
 
 
 def _decode_image_bytes(data: bytes) -> np.ndarray:
@@ -260,6 +281,7 @@ def render_inference_page(title: str = "Inference") -> None:
                         results.append(_run_method(method_name, bgr_run))
                     except Exception as e:
                         method_errors[method_name] = str(e)
+            _release_model_memory()
             st.session_state["single_last_render"] = {
                 "file_hash": file_hash,
                 "file_bytes": file_bytes,
@@ -395,6 +417,7 @@ def render_inference_page(title: str = "Inference") -> None:
                 except Exception as e:
                     zf.writestr(f"{Path(img_name).stem}_error.txt", str(e))
                 prog.progress(int(i / len(uploaded_entries) * 100))
+        _release_model_memory()
         batch_cache[batch_sig] = results_zip.getvalue()
 
     if batch_sig in batch_cache:
