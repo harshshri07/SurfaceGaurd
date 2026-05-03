@@ -17,3 +17,6 @@ streamlit
 
 open_clip_torch
 
+# Local package (required for `import surfaceguard` on Streamlit Cloud, CI, etc.)
+-e .
+
