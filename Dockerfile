@@ -15,6 +15,8 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     STREAMLIT_SERVER_HEADLESS=true \
     STREAMLIT_SERVER_RUN_ON_SAVE=false \
     STREAMLIT_SERVER_FILE_WATCHER_TYPE=none \
+    STREAMLIT_SERVER_ENABLE_CORS=false \
+    STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=false \
     TORCH_HOME=/root/.cache/torch \
     HF_HOME=/root/.cache/huggingface
 
@@ -41,5 +43,5 @@ RUN python -c "from torchvision import models; models.wide_resnet50_2(weights='D
 
 EXPOSE 8501
 
-CMD ["streamlit", "run", "app/Home.py", "--server.address=0.0.0.0", "--server.port=8501", "--server.runOnSave=false", "--server.fileWatcherType=none"]
+CMD ["streamlit", "run", "app/Home.py", "--server.address=0.0.0.0", "--server.port=8501", "--server.runOnSave=false", "--server.fileWatcherType=none", "--server.enableCORS=false", "--server.enableXsrfProtection=false"]
 
