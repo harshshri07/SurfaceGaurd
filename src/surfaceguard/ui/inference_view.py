@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import io
+import hashlib
+import os
 import zipfile
 from pathlib import Path
 from typing import Any, Dict, List
@@ -14,7 +16,8 @@ from surfaceguard.ui.model_cache import load_patchcore_model, load_winclip_model
 
 
 def _read_image(uploaded) -> np.ndarray:
-    data = uploaded.read()
+    # getvalue() is stable across Streamlit reruns; read() can consume the buffer.
+    data = uploaded.getvalue() if hasattr(uploaded, "getvalue") else uploaded.read()
     arr = np.frombuffer(data, dtype=np.uint8)
     bgr = cv2.imdecode(arr, cv2.IMREAD_COLOR)
     if bgr is None:
@@ -45,10 +48,12 @@ def render_inference_page(title: str = "Inference") -> None:
 
     with st.sidebar:
         st.subheader("Settings")
+        is_hf_space = bool(os.getenv("SPACE_ID") or os.getenv("HF_SPACE_ID"))
+        default_methods = ["patchcore"] if is_hf_space else ["patchcore", "winclip"]
         selected_methods = st.multiselect(
             "Methods (side-by-side)",
             ["patchcore", "winclip", "hybrid"],
-            default=["patchcore", "winclip"],
+            default=default_methods,
         )
         if not selected_methods:
             st.warning("Select at least one method.")
@@ -221,8 +226,43 @@ def render_inference_page(title: str = "Inference") -> None:
             st.error(str(e))
             return
 
-        with st.spinner("Running inference..."):
-            results = [_run_method(m, bgr) for m in selected_methods]
+        file_bytes = uploaded.getvalue() if hasattr(uploaded, "getvalue") else b""
+        cache_key = (
+            hashlib.md5(file_bytes).hexdigest() if file_bytes else uploaded.name,
+            tuple(sorted(selected_methods)),
+            patchcore_category,
+            winclip_prompt_hint,
+            win_stride,
+            blur_sigma,
+            hybrid_alpha,
+            hybrid_threshold,
+            mask_mode,
+            manual_thr,
+            enable_int8,
+        )
+        single_cache: Dict[Any, Any] = st.session_state.setdefault("single_infer_cache", {})
+        cached_payload = single_cache.get(cache_key)
+        if cached_payload is not None:
+            results = cached_payload["results"]
+            method_errors = cached_payload["method_errors"]
+        else:
+            with st.spinner("Running inference..."):
+                results = []
+                method_errors = {}
+                for method_name in selected_methods:
+                    try:
+                        results.append(_run_method(method_name, bgr))
+                    except Exception as e:
+                        method_errors[method_name] = str(e)
+            single_cache[cache_key] = {"results": results, "method_errors": method_errors}
+
+        if method_errors:
+            st.warning("Some selected methods failed. Showing available results.")
+            for m, err in method_errors.items():
+                st.caption(f"{m}: {err}")
+        if not results:
+            st.error("No method produced a result. Try selecting PatchCore only or configure HF_TOKEN.")
+            return
 
         st.subheader("Input")
         input_cols = st.columns([1, 2, 1])
@@ -285,15 +325,18 @@ def render_inference_page(title: str = "Inference") -> None:
                 if img is None:
                     raise ValueError("Could not decode image")
                 for method_name in selected_methods:
-                    if method_name == "patchcore" and (i - 1) in patchcore_batch_fast:
-                        base = patchcore_batch_fast[i - 1]
-                        overlay = overlay_heatmap(img, base["heatmap"])
-                        res = {**base, "overlay_bgr": overlay}
-                    else:
-                        res = _run_method(method_name, img)
-                    ok, buf = cv2.imencode(".png", res["overlay_bgr"])
-                    if ok:
-                        zf.writestr(f"{method_name}/{Path(img_name).stem}_overlay.png", buf.tobytes())
+                    try:
+                        if method_name == "patchcore" and (i - 1) in patchcore_batch_fast:
+                            base = patchcore_batch_fast[i - 1]
+                            overlay = overlay_heatmap(img, base["heatmap"])
+                            res = {**base, "overlay_bgr": overlay}
+                        else:
+                            res = _run_method(method_name, img)
+                        ok, buf = cv2.imencode(".png", res["overlay_bgr"])
+                        if ok:
+                            zf.writestr(f"{method_name}/{Path(img_name).stem}_overlay.png", buf.tobytes())
+                    except Exception as e:
+                        zf.writestr(f"{method_name}/{Path(img_name).stem}_error.txt", str(e))
             except Exception as e:
                 zf.writestr(f"{Path(img_name).stem}_error.txt", str(e))
             prog.progress(int(i / len(uploaded_files) * 100))
