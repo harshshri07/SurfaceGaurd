@@ -48,7 +48,7 @@ def render_inference_page(title: str = "Inference") -> None:
         selected_methods = st.multiselect(
             "Methods",
             ["patchcore", "winclip", "hybrid"],
-            default=["patchcore", "winclip"],
+            default=["patchcore"],
         )
         if not selected_methods:
             st.warning("Select at least one method.")
@@ -216,7 +216,6 @@ def render_inference_page(title: str = "Inference") -> None:
 
     if len(uploaded_files) == 1:
         uploaded = uploaded_files[0]
-        col_a, col_b = st.columns([1, 2])
         try:
             bgr = _read_image(uploaded)
         except Exception as e:
@@ -226,28 +225,28 @@ def render_inference_page(title: str = "Inference") -> None:
         with st.spinner("Running inference..."):
             results = [_run_method(m, bgr) for m in selected_methods]
 
-        with col_a:
-            st.subheader("Input")
+        st.subheader("Input")
+        input_cols = st.columns([1, 1])
+        with input_cols[0]:
             st.image(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB), width="stretch")
 
-        with col_b:
-            st.subheader("Results")
-            method_cols = st.columns(len(results))
-            for idx, res in enumerate(results):
-                with method_cols[idx]:
-                    st.markdown(f"**{str(res['method']).title()}**")
-                    prediction = str(res["label"]).title()
-                    score_text = f"{float(res['score']):.4f}"
-                    pred_color = "#ef4444" if str(res["label"]).lower() == "defective" else "#22c55e"
-                    st.markdown(
-                        f"Prediction: <span style='color:{pred_color}; font-weight:700;'>{prediction}</span> | "
-                        f"Score: <b>{score_text}</b>",
-                        unsafe_allow_html=True,
-                    )
-                    st.image(cv2.cvtColor(res["overlay_bgr"], cv2.COLOR_BGR2RGB), width="stretch")
-                    if res.get("mask_uint8") is not None:
-                        st.caption("Binary mask")
-                        st.image(res["mask_uint8"], width="stretch")
+        st.subheader("Results")
+        method_cols = st.columns(len(results))
+        for idx, res in enumerate(results):
+            with method_cols[idx]:
+                st.markdown(f"**{str(res['method']).title()}**")
+                prediction = str(res["label"]).title()
+                score_text = f"{float(res['score']):.4f}"
+                pred_color = "#ef4444" if str(res["label"]).lower() == "defective" else "#22c55e"
+                st.markdown(
+                    f"Prediction: <span style='color:{pred_color}; font-weight:700;'>{prediction}</span> | "
+                    f"Score: <b>{score_text}</b>",
+                    unsafe_allow_html=True,
+                )
+                st.image(cv2.cvtColor(res["overlay_bgr"], cv2.COLOR_BGR2RGB), width="stretch")
+                if res.get("mask_uint8") is not None:
+                    st.caption("Binary mask")
+                    st.image(res["mask_uint8"], width="stretch")
         return
 
     st.subheader(f"Batch inference ({len(uploaded_files)} images)")
