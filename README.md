@@ -31,7 +31,6 @@ This project is deployed as a **Hugging Face Space using Docker SDK**.
 
 **WinCLIP (no separate trained file from you):** WinCLIP uses **OpenCLIP** pretrained weights (`ViT-B-32`, LAION). There is **no** large custom WinCLIP checkpoint like PatchCore’s `memory.npz`. Those weights **download automatically** when WinCLIP runs (cached after first use). You do **not** upload a second “WinCLIP model file” unless you customize the code to save one — the course demo only requires **PatchCore on Hub** for your trained artifact.
 
-**Report / video:** submit separately — **do not** put the PDF or video inside the code zip.
 
 ---
 
