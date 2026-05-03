@@ -1,3 +1,13 @@
+---
+title: SurfaceGuard
+emoji: 🔍
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 8501
+pinned: false
+---
+
 ## SurfaceGuard (PatchCore + WinCLIP + Streamlit)
 
 Industrial surface anomaly detection and localization with a deployable Streamlit UI.
@@ -7,11 +17,11 @@ Industrial surface anomaly detection and localization with a deployable Streamli
 - **WinCLIP (practical variant)**: CLIP-based anomaly scoring with windowed heatmaps (zero/few-shot style).
 - **Evaluation**: image AUROC, pixel AUROC, AU-PRO, F1.
 - **UI**: side-by-side model comparison (PatchCore, WinCLIP, Hybrid) and benchmark runner.
-- **Deployment**: **Hugging Face Spaces** (Streamlit) — live inference with uploads in the browser.
+- **Deployment**: **Hugging Face Docker Spaces** — live inference with uploads in the browser.
 
-### Course option (this repo): Hugging Face (not Docker)
+### Course option (this repo): Hugging Face Docker Space
 
-Your syllabus lists **Option 1 (Docker)** vs **Option 2 (Hugging Face)**. **This project follows Option 2:** run it as a **Hugging Face Space** (Streamlit UI, interactive inference). **Docker / Railway are not used** here.
+This project is deployed as a **Hugging Face Space using Docker SDK**.
 
 ### Course submission (per grader instructions)
 
@@ -147,16 +157,15 @@ Training checkpoints (`outputs/patchcore/**/meta.yaml`) and evaluation reports (
 - `config_hash`: stable hash of the YAML config contents
 - `git_commit`: short git commit id (when available)
 
-### Hugging Face Space (official deployment)
+### Hugging Face Docker Space (official deployment)
 
-**Do not remove Streamlit** — Hugging Face **Spaces** use Streamlit (or Gradio) as the web UI. This app stays Streamlit.
-
-1. Create a **new Space** → **Streamlit** SDK → attach this GitHub repository (or push a copy).
-2. In Space **Settings → Repository**, set the **main app file** to **`app/Home.py`** (so multipage routes under `app/pages/` resolve correctly).
-3. **Secrets / variables** (Space settings):  
-   - `SURFACEGUARD_HF_REPO_ID` = your Model repo id (same value as `hf_patchcore_repo` in `configs/app.yaml`), **or** edit `configs/app.yaml` in the repo before deploy.  
-   - `HF_TOKEN` if the Model repo is private.
-4. Open the public Space URL — upload images in the UI to verify inference.
+1. Create a **new Space** and choose **Docker** SDK.
+2. Push this repository to that Space (or connect GitHub).
+3. In Space **Settings → Variables and secrets**:
+   - `SURFACEGUARD_HF_REPO_ID`: Model repo containing `patchcore/<category>/...` (optional but recommended)
+   - `HF_TOKEN`: required only if that model repo is private
+4. Build will use the root `Dockerfile` automatically; app serves on port `8501` (declared via README front matter `app_port`).
+5. Open the Space URL and run inference from the UI.
 
 **Why one Hub repo for PatchCore:** Large `memory.npz` files live in that **Model** repo under `patchcore/<category>/`. The Space clones your **code** repo; at runtime the app pulls weights from the **Model** repo so nothing huge needs to sit in the Space git tree.
 
