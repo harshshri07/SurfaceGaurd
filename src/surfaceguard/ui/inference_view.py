@@ -256,12 +256,10 @@ def render_inference_page(title: str = "Inference") -> None:
             manual_thr,
             enable_int8,
         )
+        run_single = st.button("Run inference", type="primary", key="run_single_inference")
         single_cache: Dict[Any, Any] = st.session_state.setdefault("single_infer_cache", {})
         cached_payload = single_cache.get(cache_key)
-        if cached_payload is not None:
-            results = cached_payload["results"]
-            method_errors = cached_payload["method_errors"]
-        else:
+        if run_single:
             with st.spinner("Running inference..."):
                 results = []
                 method_errors = {}
@@ -271,6 +269,18 @@ def render_inference_page(title: str = "Inference") -> None:
                     except Exception as e:
                         method_errors[method_name] = str(e)
             single_cache[cache_key] = {"results": results, "method_errors": method_errors}
+            cached_payload = single_cache.get(cache_key)
+
+        if cached_payload is None:
+            st.info("Click **Run inference** to generate results.")
+            st.subheader("Input")
+            input_cols = st.columns([1, 2, 1])
+            with input_cols[1]:
+                st.image(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB), width="stretch")
+            return
+
+        results = cached_payload["results"]
+        method_errors = cached_payload["method_errors"]
 
         if method_errors:
             st.warning("Some selected methods failed. Showing available results.")
@@ -333,34 +343,56 @@ def render_inference_page(title: str = "Inference") -> None:
                     "checkpoint_used": patchcore_category,
                 }
 
-    results_zip = io.BytesIO()
-    with zipfile.ZipFile(results_zip, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        prog = st.progress(0)
-        for i, (img, img_name) in enumerate(zip(decoded_images, image_names), start=1):
-            try:
-                if img is None:
-                    raise ValueError("Could not decode image")
-                for method_name in selected_methods:
-                    try:
-                        if method_name == "patchcore" and (i - 1) in patchcore_batch_fast:
-                            base = patchcore_batch_fast[i - 1]
-                            overlay = overlay_heatmap(img, base["heatmap"])
-                            res = {**base, "overlay_bgr": overlay}
-                        else:
-                            res = _run_method(method_name, img)
-                        ok, buf = cv2.imencode(".png", res["overlay_bgr"])
-                        if ok:
-                            zf.writestr(f"{method_name}/{Path(img_name).stem}_overlay.png", buf.tobytes())
-                    except Exception as e:
-                        zf.writestr(f"{method_name}/{Path(img_name).stem}_error.txt", str(e))
-            except Exception as e:
-                zf.writestr(f"{Path(img_name).stem}_error.txt", str(e))
-            prog.progress(int(i / len(uploaded_entries) * 100))
+    batch_sig = hashlib.md5(
+        b"||".join(
+            [e.get("bytes", b"") for e in uploaded_entries]
+            + [str(x).encode("utf-8") for x in sorted(selected_methods)]
+            + [
+                str(patchcore_category).encode("utf-8"),
+                str(winclip_prompt_hint).encode("utf-8"),
+                str(win_stride).encode("utf-8"),
+                str(blur_sigma).encode("utf-8"),
+                str(mask_mode).encode("utf-8"),
+                str(manual_thr).encode("utf-8"),
+                str(enable_int8).encode("utf-8"),
+            ]
+        )
+    ).hexdigest()
 
-    results_zip.seek(0)
-    st.download_button(
-        label="Download overlays (ZIP)",
-        data=results_zip,
-        file_name="surfaceguard_compare_overlays.zip",
-        mime="application/zip",
-    )
+    run_batch = st.button("Run batch inference", type="primary", key="run_batch_inference")
+    batch_cache: Dict[str, bytes] = st.session_state.setdefault("batch_zip_cache", {})
+    if run_batch:
+        results_zip = io.BytesIO()
+        with zipfile.ZipFile(results_zip, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            prog = st.progress(0)
+            for i, (img, img_name) in enumerate(zip(decoded_images, image_names), start=1):
+                try:
+                    if img is None:
+                        raise ValueError("Could not decode image")
+                    for method_name in selected_methods:
+                        try:
+                            if method_name == "patchcore" and (i - 1) in patchcore_batch_fast:
+                                base = patchcore_batch_fast[i - 1]
+                                overlay = overlay_heatmap(img, base["heatmap"])
+                                res = {**base, "overlay_bgr": overlay}
+                            else:
+                                res = _run_method(method_name, img)
+                            ok, buf = cv2.imencode(".png", res["overlay_bgr"])
+                            if ok:
+                                zf.writestr(f"{method_name}/{Path(img_name).stem}_overlay.png", buf.tobytes())
+                        except Exception as e:
+                            zf.writestr(f"{method_name}/{Path(img_name).stem}_error.txt", str(e))
+                except Exception as e:
+                    zf.writestr(f"{Path(img_name).stem}_error.txt", str(e))
+                prog.progress(int(i / len(uploaded_entries) * 100))
+        batch_cache[batch_sig] = results_zip.getvalue()
+
+    if batch_sig in batch_cache:
+        st.download_button(
+            label="Download overlays (ZIP)",
+            data=batch_cache[batch_sig],
+            file_name="surfaceguard_compare_overlays.zip",
+            mime="application/zip",
+        )
+    else:
+        st.info("Click **Run batch inference** to generate overlays ZIP.")
