@@ -11,6 +11,16 @@ from sklearn.neighbors import NearestNeighbors
 from torchvision import models as tvm
 
 
+def _prepare_quant_backend() -> bool:
+    supported = [e for e in torch.backends.quantized.supported_engines if e != "none"]
+    if not supported:
+        return False
+    if torch.backends.quantized.engine == "none":
+        preferred = "qnnpack" if "qnnpack" in supported else supported[0]
+        torch.backends.quantized.engine = preferred
+    return torch.backends.quantized.engine in supported
+
+
 def _build_backbone(name: str) -> torch.nn.Module:
     if not hasattr(tvm, name):
         raise ValueError(f"Unknown torchvision backbone: {name}")
@@ -96,12 +106,57 @@ class PatchCoreState:
 
 
 class PatchCoreEngine:
-    def __init__(self, state: PatchCoreState, device: torch.device) -> None:
+    def __init__(self, state: PatchCoreState, device: torch.device, enable_int8: bool = False) -> None:
         self.state = state
         self.device = device
         self.backbone = _build_backbone(state.backbone).to(device)
+        self.enable_int8 = bool(enable_int8 and device.type == "cpu")
+        if self.enable_int8:
+            # Dynamic quantization targets Linear layers and is safe for post-training CPU inference.
+            # Some builds (e.g., NoQEngine) do not support quantized ops; fallback to FP32 gracefully.
+            try:
+                if _prepare_quant_backend():
+                    self.backbone = torch.ao.quantization.quantize_dynamic(
+                        self.backbone, {torch.nn.Linear}, dtype=torch.qint8
+                    )
+                else:
+                    self.enable_int8 = False
+            except Exception:
+                self.enable_int8 = False
         self.nn = NearestNeighbors(n_neighbors=state.nn_k, algorithm="auto")
         self.nn.fit(state.memory)
+
+    @torch.no_grad()
+    def batch_score(self, image_tensor: torch.Tensor) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        image_tensor: [B,3,H,W] normalized
+        returns: (image_scores[B], heatmaps[B,H,W])
+        """
+        fmap = extract_feature_map(self.backbone, image_tensor.to(self.device), self.state.layer)
+        patches = feature_map_to_patches(fmap)  # [B,P,C]
+        patches = l2_normalize(patches, dim=-1)
+        p = patches.detach().cpu().numpy().astype(np.float32)  # [B,P,D]
+        b, p_count, _ = p.shape
+        flat = p.reshape(b * p_count, -1)
+        dist, _ = self.nn.kneighbors(flat, return_distance=True)  # [B*P,k]
+        patch_scores = dist[:, 0].astype(np.float32).reshape(b, p_count)
+
+        # heatmap in feature-map resolution
+        _, _, fh, fw = fmap.shape
+        heat_feat = patch_scores.reshape(b, fh, fw)
+        # upsample to image resolution
+        heat = torch.from_numpy(heat_feat)[:, None, :, :]
+        heat_up = F.interpolate(heat, size=(self.state.image_size, self.state.image_size), mode="bilinear", align_corners=False)
+        heat_up = heat_up.squeeze(1).numpy().astype(np.float32)
+
+        if self.state.image_score == "max":
+            img_score = patch_scores.max(axis=1).astype(np.float32)
+        else:
+            k = min(self.state.topk, patch_scores.shape[1])
+            topk_sorted = np.sort(patch_scores, axis=1)[:, -k:]
+            img_score = topk_sorted.mean(axis=1).astype(np.float32)
+
+        return img_score, heat_up
 
     @torch.no_grad()
     def score(self, image_tensor: torch.Tensor) -> Tuple[float, np.ndarray]:
@@ -109,26 +164,6 @@ class PatchCoreEngine:
         image_tensor: [1,3,H,W] normalized
         returns: (image_score, heatmap_float32 [H,W])
         """
-        fmap = extract_feature_map(self.backbone, image_tensor.to(self.device), self.state.layer)
-        patches = feature_map_to_patches(fmap)  # [1,P,C]
-        patches = l2_normalize(patches, dim=-1)
-        p = patches.squeeze(0).detach().cpu().numpy().astype(np.float32)  # [P,D]
-        dist, _ = self.nn.kneighbors(p, return_distance=True)  # [P,k]
-        patch_scores = dist[:, 0].astype(np.float32)
-
-        # heatmap in feature-map resolution
-        _, _, fh, fw = fmap.shape
-        heat_feat = patch_scores.reshape(fh, fw)
-        # upsample to image resolution
-        heat = torch.from_numpy(heat_feat)[None, None, :, :]
-        heat_up = F.interpolate(heat, size=(self.state.image_size, self.state.image_size), mode="bilinear", align_corners=False)
-        heat_up = heat_up.squeeze().numpy().astype(np.float32)
-
-        if self.state.image_score == "max":
-            img_score = float(patch_scores.max())
-        else:
-            k = min(self.state.topk, patch_scores.shape[0])
-            img_score = float(np.mean(np.sort(patch_scores)[-k:]))
-
-        return img_score, heat_up
+        img_scores, heatmaps = self.batch_score(image_tensor)
+        return float(img_scores[0]), heatmaps[0]
 

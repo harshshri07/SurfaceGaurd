@@ -22,6 +22,7 @@ class WinCLIPModel:
         window_size: int = 224,
         window_stride: int = 112,
         blur_sigma: float = 0.0,
+        enable_int8: bool = False,
     ) -> "WinCLIPModel":
         if not category or category.strip().lower() == "auto":
             category = "object"
@@ -49,7 +50,7 @@ class WinCLIPModel:
             blur_sigma=float(blur_sigma),
         )
         device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-        engine = WinCLIPEngine(state, device=device, category=category)
+        engine = WinCLIPEngine(state, device=device, category=category, enable_int8=enable_int8)
         return cls(category=category, cache_dir=cache_dir, engine=engine)
 
     def predict(self, image_bgr: np.ndarray) -> Dict:

@@ -14,6 +14,16 @@ def _l2(x: torch.Tensor, eps: float = 1e-12) -> torch.Tensor:
     return x / (x.norm(dim=-1, keepdim=True) + eps)
 
 
+def _prepare_quant_backend() -> bool:
+    supported = [e for e in torch.backends.quantized.supported_engines if e != "none"]
+    if not supported:
+        return False
+    if torch.backends.quantized.engine == "none":
+        preferred = "qnnpack" if "qnnpack" in supported else supported[0]
+        torch.backends.quantized.engine = preferred
+    return torch.backends.quantized.engine in supported
+
+
 @dataclass
 class WinCLIPState:
     model: str
@@ -27,7 +37,7 @@ class WinCLIPState:
 
 
 class WinCLIPEngine:
-    def __init__(self, state: WinCLIPState, device: torch.device, category: str) -> None:
+    def __init__(self, state: WinCLIPState, device: torch.device, category: str, enable_int8: bool = False) -> None:
         self.state = state
         self.device = device
         self.category = category
@@ -36,6 +46,25 @@ class WinCLIPEngine:
             state.model, pretrained=state.pretrained
         )
         self.model = self.model.to(device).eval()
+        self.enable_int8 = bool(enable_int8 and device.type == "cpu")
+        if self.enable_int8:
+            # Lightweight post-training dynamic quantization for CPU deployments.
+            # Some builds (e.g., NoQEngine) do not support quantized ops; fallback to FP32 gracefully.
+            try:
+                if _prepare_quant_backend():
+                    fp32_model = self.model
+                    quantized_model = torch.ao.quantization.quantize_dynamic(
+                        self.model, {torch.nn.Linear}, dtype=torch.qint8
+                    )
+                    # Validate OpenCLIP text path still works; some quantized layers expose non-tensor weights.
+                    tok = open_clip.get_tokenizer(state.model)(["a photo of an object"]).to(device)
+                    _ = quantized_model.encode_text(tok)
+                    self.model = quantized_model
+                else:
+                    self.enable_int8 = False
+            except Exception:
+                self.model = fp32_model if "fp32_model" in locals() else self.model
+                self.enable_int8 = False
         self.tokenizer = open_clip.get_tokenizer(state.model)
 
         self.text_normal = self._encode_text([p.format(category=category) for p in state.normal_prompts])

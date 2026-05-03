@@ -12,7 +12,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from surfaceguard.data.mvtec import mvtec_category_names
+from surfaceguard.data.mvtec import MVTec_AD_15_CATEGORIES, resolve_mvtec_categories
 from surfaceguard.eval.runner import eval_method_for_category
 from surfaceguard.train.patchcore_trainer import train_patchcore_for_category
 from surfaceguard.utils.config import load_yaml
@@ -26,7 +26,7 @@ def _parse_csv(v: str) -> List[str]:
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Run multi-category benchmark and aggregate reports.")
-    p.add_argument("--categories", type=str, default="bottle,capsule,cable")
+    p.add_argument("--categories", type=str, default="all")
     p.add_argument("--all_categories", action="store_true")
     p.add_argument("--methods", type=str, default="patchcore,winclip")
     p.add_argument("--patchcore_config", type=str, default="configs/patchcore_mvtec.yaml")
@@ -61,10 +61,10 @@ def main() -> None:
     pc_cfg = load_yaml(args.patchcore_config)
     wc_cfg = load_yaml(args.winclip_config)
 
-    if args.all_categories:
-        categories = mvtec_category_names(pc_cfg["data"]["root"])
+    if args.all_categories or (args.categories or "").strip().lower() == "all":
+        categories = resolve_mvtec_categories(pc_cfg["data"]["root"], list(MVTec_AD_15_CATEGORIES))
     else:
-        categories = _parse_csv(args.categories)
+        categories = resolve_mvtec_categories(pc_cfg["data"]["root"], _parse_csv(args.categories))
 
     if not categories:
         raise ValueError("No categories selected. Provide --categories or use --all_categories.")

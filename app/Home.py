@@ -65,7 +65,7 @@ def main() -> None:
     st.session_state.setdefault("outputs_dir", _auto_detect_outputs_dir(configured_outputs))
 
     st.title("SurfaceGuard")
-    st.caption("Industrial surface defect detection + localization (PatchCore + WinCLIP).")
+    st.caption("Industrial surface defect detection + localization (PatchCore + WinCLIP + Hybrid).")
 
     render_inference_page(title="Inference")
 

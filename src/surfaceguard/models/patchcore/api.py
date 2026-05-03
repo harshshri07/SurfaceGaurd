@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List
 
 import numpy as np
 import cv2
+import torch
 
 from surfaceguard.data.transforms import build_image_transform
 from surfaceguard.models.patchcore.core import PatchCoreEngine, PatchCoreState
@@ -20,7 +21,7 @@ class PatchCoreModel:
     engine: PatchCoreEngine
 
     @classmethod
-    def load(cls, ckpt_dir: Path) -> "PatchCoreModel":
+    def load(cls, ckpt_dir: Path, enable_int8: bool = False) -> "PatchCoreModel":
         ckpt_dir = Path(ckpt_dir)
         if not ckpt_dir.exists():
             raise FileNotFoundError(
@@ -40,16 +41,34 @@ class PatchCoreModel:
             memory=mem,
         )
         device = get_device()
-        engine = PatchCoreEngine(state, device=device)
+        engine = PatchCoreEngine(state, device=device, enable_int8=enable_int8)
         return cls(category=meta.get("category", ckpt_dir.name), engine=engine)
 
     def predict(self, image_bgr: np.ndarray) -> Dict:
-        img = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
+        return self.predict_batch([image_bgr])[0]
+
+    def predict_batch(self, images_bgr: List[np.ndarray]) -> List[Dict]:
+        if not images_bgr:
+            return []
         t = build_image_transform(self.engine.state.image_size, normalize="imagenet")
         import PIL.Image
 
-        x = t(PIL.Image.fromarray(img)).unsqueeze(0)
-        score, heat = self.engine.score(x)
-        label = "defective" if score >= self.engine.state.threshold else "normal"
-        return {"label": label, "score": float(score), "heatmap": heat}
+        tensor_list = []
+        for image_bgr in images_bgr:
+            rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
+            tensor_list.append(t(PIL.Image.fromarray(rgb)))
+        batch = torch.stack(tensor_list, dim=0)
+        scores, heats = self.engine.batch_score(batch)
+        out: List[Dict] = []
+        thr = float(self.engine.state.threshold)
+        for score, heat in zip(scores, heats):
+            f_score = float(score)
+            out.append(
+                {
+                    "label": "defective" if f_score >= thr else "normal",
+                    "score": f_score,
+                    "heatmap": heat,
+                }
+            )
+        return out
 
