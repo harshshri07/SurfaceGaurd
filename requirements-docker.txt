@@ -4,7 +4,7 @@ pandas
 tqdm
 pyyaml
 pillow
-opencv-python
+opencv-python-headless
 matplotlib
 scikit-learn
 scikit-image

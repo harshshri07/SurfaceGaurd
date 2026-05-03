@@ -4,7 +4,8 @@ pandas
 tqdm
 pyyaml
 pillow
-opencv-python
+# Headless build: no libGL dependency (required for Streamlit Cloud / Docker slim)
+opencv-python-headless
 matplotlib
 scikit-learn
 scikit-image
