@@ -1,0 +1,11 @@
+name: surfaceguard
+
+services:
+  surfaceguard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: surfaceguard:latest
+    ports:
+      - "8501:8501"
+    restart: unless-stopped
