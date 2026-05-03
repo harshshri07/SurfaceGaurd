@@ -157,7 +157,7 @@ docker build -t surfaceguard:latest .
 docker run --rm -p 8501:8501 surfaceguard:latest
 ```
 
-Docker Compose (reproducible deployment):
+Docker Compose (reproducible deployment; uses `compose.yaml` at the repo root):
 
 ```bash
 docker compose up --build

@@ -3,6 +3,12 @@
 **/__pycache__/
 **/*.pyc
 
+# Build / packaging (never commit)
+*.egg-info/
+dist/
+build/
+*.egg
+
 /data/
 # Default: ignore generated artifacts
 /outputs/*
@@ -17,4 +23,14 @@
 # Torch / misc caches
 /.cache/
 **/.cache/
+
+# Test / tools
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.idea/
+.vscode/
+*.code-workspace
 
