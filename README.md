@@ -6,7 +6,8 @@ Industrial surface anomaly detection and localization with a deployable Streamli
 - **PatchCore**: train on normal images, detect + localize defects with anomaly heatmaps.
 - **WinCLIP (practical variant)**: CLIP-based anomaly scoring with windowed heatmaps (zero/few-shot style).
 - **Evaluation**: image AUROC, pixel AUROC, AU-PRO, F1.
-- **UI**: interactive inference + a simple benchmark runner that writes JSON reports into `outputs/`.
+- **UI**: side-by-side model comparison (PatchCore, WinCLIP, Hybrid) and benchmark runner.
+- **Deployment**: Docker + Docker Compose support for reproducible local deployment.
 
 ### Folder layout
 - `src/surfaceguard/`: library code
@@ -66,12 +67,12 @@ python tools\train_patchcore.py --config configs\patchcore_mvtec.yaml --category
 
 Evaluate PatchCore:
 ```powershell
-python tools\eval.py --config configs\patchcore_mvtec.yaml --method patchcore --category bottle
+python tools\eval.py --config configs\patchcore_mvtec.yaml --method patchcore --categories all
 ```
 
 Evaluate WinCLIP:
 ```powershell
-python tools\eval.py --config configs\winclip_mvtec.yaml --method winclip --category bottle
+python tools\eval.py --config configs\winclip_mvtec.yaml --method winclip --categories all
 ```
 
 Benchmark all categories (writes per-category reports + an aggregated summary JSON under `outputs/reports/`):
@@ -122,6 +123,20 @@ Training checkpoints (`outputs/patchcore/**/meta.yaml`) and evaluation reports (
 
 ### Docker (one-command run)
 The Streamlit UI is fully containerized. It includes all Python dependencies and (by default) the trained PatchCore artifacts under `outputs/patchcore/` so inference works immediately.
+The container runs Streamlit in production mode (file watcher and run-on-save disabled) to avoid auto-reload restarts.
+Backbone weights are pre-fetched at build time, so first inference does not need runtime downloads.
+
+macOS / Linux:
+
+```bash
+./scripts/run_docker.sh
+```
+
+Foreground mode (attached):
+
+```bash
+DETACH=0 ./scripts/run_docker.sh
+```
 
 Windows PowerShell:
 
@@ -129,10 +144,34 @@ Windows PowerShell:
 .\scripts\run_docker.ps1
 ```
 
+Foreground mode (attached):
+
+```powershell
+.\scripts\run_docker.ps1 -Detach:$false
+```
+
 Or manually:
 
 ```powershell
 docker build -t surfaceguard:latest .
 docker run --rm -p 8501:8501 surfaceguard:latest
+```
+
+Docker Compose (reproducible deployment):
+
+```bash
+docker compose up --build
+```
+
+or
+
+```powershell
+.\scripts\run_docker.ps1 -Compose
+```
+
+macOS / Linux via helper script:
+
+```bash
+USE_COMPOSE=1 ./scripts/run_docker.sh
 ```
 

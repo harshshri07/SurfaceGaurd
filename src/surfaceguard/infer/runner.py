@@ -11,21 +11,23 @@ from surfaceguard.models.winclip.api import WinCLIPModel
 from surfaceguard.eval.visualize import overlay_heatmap, threshold_mask
 
 
-def _load_patchcore(outputs_dir: Path, category: str) -> PatchCoreModel:
+def _load_patchcore(outputs_dir: Path, category: str, enable_int8: bool = False) -> PatchCoreModel:
     ckpt_dir = outputs_dir / "patchcore" / category
-    return PatchCoreModel.load(ckpt_dir)
+    return PatchCoreModel.load(ckpt_dir, enable_int8=enable_int8)
 
 
-def _load_winclip(outputs_dir: Path, category: str) -> WinCLIPModel:
-    return WinCLIPModel.load(outputs_dir / "winclip", category=category)
+def _load_winclip(outputs_dir: Path, category: str, enable_int8: bool = False) -> WinCLIPModel:
+    return WinCLIPModel.load(outputs_dir / "winclip", category=category, enable_int8=enable_int8)
 
 
-def infer_image_array(method: str, category: str, image_bgr: np.ndarray, outputs_dir: Path) -> Dict:
+def infer_image_array(
+    method: str, category: str, image_bgr: np.ndarray, outputs_dir: Path, enable_int8: bool = False
+) -> Dict:
     if method == "patchcore":
-        model = _load_patchcore(outputs_dir, category)
+        model = _load_patchcore(outputs_dir, category, enable_int8=enable_int8)
         out = model.predict(image_bgr)
     elif method == "winclip":
-        model = _load_winclip(outputs_dir, category)
+        model = _load_winclip(outputs_dir, category, enable_int8=enable_int8)
         out = model.predict(image_bgr)
     else:
         raise ValueError(f"Unknown method: {method}")
@@ -50,9 +52,15 @@ def infer_image_array(method: str, category: str, image_bgr: np.ndarray, outputs
     }
 
 
-def infer_single_image(method: str, category: str, image_path: Path, outputs_dir: Path) -> Dict:
+def infer_single_image(method: str, category: str, image_path: Path, outputs_dir: Path, enable_int8: bool = False) -> Dict:
     bgr = cv2.imread(str(image_path), cv2.IMREAD_COLOR)
     if bgr is None:
         raise FileNotFoundError(f"Could not read image: {image_path}")
-    return infer_image_array(method=method, category=category, image_bgr=bgr, outputs_dir=outputs_dir)
+    return infer_image_array(
+        method=method,
+        category=category,
+        image_bgr=bgr,
+        outputs_dir=outputs_dir,
+        enable_int8=enable_int8,
+    )
 

@@ -23,4 +23,6 @@ data/
 # so the container can run inference without extra setup.
 # (If you want a slim image, remove the next line to ignore outputs entirely.)
 !outputs/patchcore/**
+!outputs/reports/**
+!outputs/manifests/**
 

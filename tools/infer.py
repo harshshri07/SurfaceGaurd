@@ -17,6 +17,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--outputs_dir", default="outputs", type=str)
     p.add_argument("--save_overlay", action="store_true")
     p.add_argument("--overlay_name", default="infer_overlay.png", type=str)
+    p.add_argument("--int8", action="store_true", help="Enable dynamic INT8 quantization (CPU inference).")
     return p.parse_args()
 
 
@@ -27,6 +28,7 @@ def main() -> None:
         category=args.category,
         image_path=Path(args.image),
         outputs_dir=Path(args.outputs_dir),
+        enable_int8=args.int8,
     )
     print(f"label={res['label']} score={res['score']:.6f}")
     if args.save_overlay:

@@ -5,30 +5,11 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List
 
+from surfaceguard.data.mvtec import MVTec_AD_15_CATEGORIES
 from surfaceguard.eval.runner import eval_method_for_category
 from surfaceguard.utils.config import load_yaml
 from surfaceguard.utils.io import ensure_dir
 from surfaceguard.utils.provenance import get_git_commit_short, stable_cfg_hash
-
-
-MVTec_CATEGORIES: List[str] = [
-    "bottle",
-    "cable",
-    "capsule",
-    "carpet",
-    "grid",
-    "hazelnut",
-    "leather",
-    "metal_nut",
-    "pill",
-    "screw",
-    "tile",
-    "toothbrush",
-    "transistor",
-    "wood",
-    "zipper",
-]
-
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser()
@@ -41,7 +22,7 @@ def parse_args() -> argparse.Namespace:
 def _as_list(s: str) -> List[str]:
     s = (s or "").strip()
     if not s or s.lower() == "all":
-        return list(MVTec_CATEGORIES)
+        return list(MVTec_AD_15_CATEGORIES)
     return [x.strip() for x in s.split(",") if x.strip()]
 
 

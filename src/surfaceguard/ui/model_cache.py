@@ -9,9 +9,9 @@ from surfaceguard.models.winclip.api import WinCLIPModel
 
 
 @st.cache_resource(show_spinner=False)
-def load_patchcore_model(outputs_dir: str, category: str) -> PatchCoreModel:
+def load_patchcore_model(outputs_dir: str, category: str, enable_int8: bool = False) -> PatchCoreModel:
     ckpt = Path(outputs_dir) / "patchcore" / category
-    return PatchCoreModel.load(ckpt)
+    return PatchCoreModel.load(ckpt, enable_int8=enable_int8)
 
 
 @st.cache_resource(show_spinner=False)
@@ -21,6 +21,7 @@ def load_winclip_model(
     window_size: int = 224,
     window_stride: int = 112,
     blur_sigma: float = 0.0,
+    enable_int8: bool = False,
 ) -> WinCLIPModel:
     cache_dir = Path(outputs_dir) / "winclip"
     return WinCLIPModel.load(
@@ -29,5 +30,6 @@ def load_winclip_model(
         window_size=window_size,
         window_stride=window_stride,
         blur_sigma=blur_sigma,
+        enable_int8=enable_int8,
     )
 

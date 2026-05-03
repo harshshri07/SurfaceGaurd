@@ -120,9 +120,8 @@ def train_patchcore_for_category(cfg: Dict[str, Any], category: str) -> str:
     with torch.no_grad():
         for batch in dl:
             x = batch["image"]  # keep on CPU; engine moves to device
-            for i in range(x.shape[0]):
-                s, _ = engine.score(x[i : i + 1])
-                train_scores.append(float(s))
+            scores, _ = engine.batch_score(x)
+            train_scores.extend([float(s) for s in scores])
 
     mu = float(np.mean(train_scores)) if train_scores else 0.0
     sig = float(np.std(train_scores)) if train_scores else 1.0

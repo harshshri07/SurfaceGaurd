@@ -9,6 +9,24 @@ from PIL import Image
 import torch
 from torch.utils.data import Dataset
 
+MVTec_AD_15_CATEGORIES: Tuple[str, ...] = (
+    "bottle",
+    "cable",
+    "capsule",
+    "carpet",
+    "grid",
+    "hazelnut",
+    "leather",
+    "metal_nut",
+    "pill",
+    "screw",
+    "tile",
+    "toothbrush",
+    "transistor",
+    "wood",
+    "zipper",
+)
+
 
 def _list_images(folder: Path) -> List[Path]:
     exts = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
@@ -140,4 +158,19 @@ def mvtec_category_names(root: str | Path) -> List[str]:
     if not root_p.exists():
         return []
     return sorted([d.name for d in root_p.iterdir() if d.is_dir()])
+
+
+def resolve_mvtec_categories(root: str | Path, categories: Optional[List[str]] = None) -> List[str]:
+    requested = [c.strip() for c in (categories or []) if c and c.strip()]
+    if not requested:
+        requested = list(MVTec_AD_15_CATEGORIES)
+
+    available = set(mvtec_category_names(root))
+    if not available:
+        return requested
+
+    resolved = [c for c in requested if c in available]
+    if resolved:
+        return resolved
+    return requested
 
