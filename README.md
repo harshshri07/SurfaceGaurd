@@ -1,11 +1,13 @@
 ---
 title: SurfaceGuard
 emoji: 🔍
+colorFrom: blue
+colorTo: indigo
 sdk: streamlit
-sdk_version: "1.40.1"
 app_file: app/Home.py
-short_description: PatchCore + WinCLIP anomaly detection
+short_description: Industrial surface defect detection (PatchCore + WinCLIP)
 ---
+
 
 # Welcome to Streamlit!
 
