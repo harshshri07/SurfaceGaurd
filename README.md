@@ -1,3 +1,13 @@
+---
+title: SurfaceGuard
+emoji: 🔍
+colorFrom: blue
+colorTo: indigo
+sdk: streamlit
+app_file: app/Home.py
+short_description: Industrial surface defect detection (PatchCore + WinCLIP)
+---
+
 ## SurfaceGuard (PatchCore + WinCLIP + Streamlit)
 
 Industrial surface anomaly detection and localization with a deployable Streamlit UI.
@@ -138,15 +148,9 @@ These assume your venv is in `.\.venv\`:
 .\scripts\eval_winclip.ps1    -Category bottle
 ```
 
-### Trained artifacts (Git LFS)
-The trained PatchCore memories (`outputs/patchcore/**/memory.npz`) are large binary files and should be stored with **Git LFS**.
+### Trained PatchCore weights (not in this git repo)
 
-If you clone this repo, make sure Git LFS is installed and enabled before pulling:
-
-```bash
-git lfs install
-git lfs pull
-```
+Large **`memory.npz`** files are **gitignored** here so pushes stay small (GitHub / Hugging Face Spaces). After training locally you get `outputs/patchcore/<category>/`; upload that tree to a **Hugging Face Model** repo (see above) and set **`hf_patchcore_repo`** / **`SURFACEGUARD_HF_REPO_ID`** so the app downloads weights at runtime.
 
 ### Provenance
 Training checkpoints (`outputs/patchcore/**/meta.yaml`) and evaluation reports (`outputs/reports/*.json`) include:

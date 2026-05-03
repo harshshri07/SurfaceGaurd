@@ -1,3 +1,4 @@
+/.env
 /.venv/
 /__pycache__/
 **/__pycache__/
@@ -10,12 +11,8 @@ build/
 *.egg
 
 /data/
-# Default: ignore generated artifacts
-/outputs/*
-
-# Keep trained model artifacts (tracked via Git LFS)
-!outputs/patchcore/
-!outputs/patchcore/**
+# Generated artifacts & checkpoints (PatchCore syncs from HF Model repo at runtime)
+/outputs/
 
 /.streamlit/
 .DS_Store
