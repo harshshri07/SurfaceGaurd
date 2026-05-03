@@ -48,7 +48,7 @@ def main() -> None:
                 }
                 for r in reports
             ],
-            width="stretch",
+            use_container_width=True,
         )
 
 
