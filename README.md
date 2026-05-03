@@ -1,13 +1,3 @@
----
-title: SurfaceGuard
-emoji: 🔍
-colorFrom: blue
-colorTo: indigo
-sdk: streamlit
-app_file: app/Home.py
-short_description: Industrial surface defect detection (PatchCore + WinCLIP)
----
-
 ## SurfaceGuard (PatchCore + WinCLIP + Streamlit)
 
 Industrial surface anomaly detection and localization with a deployable Streamlit UI.
