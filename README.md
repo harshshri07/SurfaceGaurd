@@ -1,14 +1,10 @@
 ---
-title: Surfaceguard
-emoji: 🚀
-colorFrom: red
-colorTo: red
-sdk: docker
-app_port: 8501
-tags:
-- streamlit
-pinned: false
-short_description: Streamlit template space
+title: SurfaceGuard
+emoji: 🔍
+sdk: streamlit
+sdk_version: "1.40.1"
+app_file: app/Home.py
+short_description: PatchCore + WinCLIP anomaly detection
 ---
 
 # Welcome to Streamlit!
