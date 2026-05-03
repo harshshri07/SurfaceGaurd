@@ -227,18 +227,13 @@ def render_inference_page(title: str = "Inference") -> None:
         st.subheader("Input")
         input_cols = st.columns([1, 2, 1])
         with input_cols[1]:
-            st.image(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB), width="stretch")
+            st.image(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB), use_container_width=True)
 
         st.subheader("Results (side-by-side)")
         method_cols = st.columns(len(results))
         for idx, res in enumerate(results):
             with method_cols[idx]:
                 st.markdown(f"**{str(res['method']).title()}**")
-                payload: Dict[str, Any] = {"label": res["label"], "score": float(res["score"])}
-                if res.get("checkpoint_used"):
-                    payload["checkpoint_used"] = res["checkpoint_used"]
-                if res.get("components"):
-                    payload.update(res["components"])
 
                 prediction = str(res["label"]).title()
                 score_text = f"{float(res['score']):.4f}"
@@ -249,12 +244,10 @@ def render_inference_page(title: str = "Inference") -> None:
                     unsafe_allow_html=True,
                 )
 
-                st.image(cv2.cvtColor(res["overlay_bgr"], cv2.COLOR_BGR2RGB), width="stretch")
+                st.image(cv2.cvtColor(res["overlay_bgr"], cv2.COLOR_BGR2RGB), use_container_width=True)
                 if res.get("mask_uint8") is not None:
                     st.caption("Binary mask")
-                    st.image(res["mask_uint8"], width="stretch")
-                with st.expander("Technical details", expanded=False):
-                    st.json(payload)
+                    st.image(res["mask_uint8"], use_container_width=True)
         return
 
     st.subheader(f"Batch inference ({len(uploaded_files)} images)")

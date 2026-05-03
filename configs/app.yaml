@@ -4,5 +4,5 @@ app:
   default_category: bottle
   default_method: patchcore
   # If outputs/patchcore is empty (e.g. fresh Space): sync entire patchcore/** tree from this Hub Model repo.
-  hf_patchcore_repo: ""
+  hf_patchcore_repo: "harsh9059/surfaceguard-patchcore"
 
