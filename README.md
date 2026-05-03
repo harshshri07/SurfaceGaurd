@@ -153,7 +153,3 @@ Training checkpoints (`outputs/patchcore/**/meta.yaml`) and evaluation reports (
 4. Build will use the root `Dockerfile` automatically; app serves on port `8501` (declared via README front matter `app_port`).
 5. Open the Space URL and run inference from the UI.
 
-**Why one Hub repo for PatchCore:** Large `memory.npz` files live in that **Model** repo under `patchcore/<category>/`. The Space clones your **code** repo; at runtime the app pulls weights from the **Model** repo so nothing huge needs to sit in the Space git tree.
-
-**Verifying for graders:** Put the **Space URL** at the top of your README or submission text so they can run the demo without installing Docker.
-
