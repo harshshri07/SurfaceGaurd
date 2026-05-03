@@ -15,14 +15,18 @@ from surfaceguard.eval.visualize import overlay_heatmap, threshold_mask
 from surfaceguard.ui.model_cache import load_patchcore_model, load_winclip_model
 
 
-def _read_image(uploaded) -> np.ndarray:
-    # getvalue() is stable across Streamlit reruns; read() can consume the buffer.
-    data = uploaded.getvalue() if hasattr(uploaded, "getvalue") else uploaded.read()
+def _decode_image_bytes(data: bytes) -> np.ndarray:
     arr = np.frombuffer(data, dtype=np.uint8)
     bgr = cv2.imdecode(arr, cv2.IMREAD_COLOR)
     if bgr is None:
         raise ValueError("Could not decode image")
     return bgr
+
+
+def _read_image(uploaded) -> np.ndarray:
+    # getvalue() is stable across Streamlit reruns; read() can consume the buffer.
+    data = uploaded.getvalue() if hasattr(uploaded, "getvalue") else uploaded.read()
+    return _decode_image_bytes(data)
 
 
 def _trained_patchcore_categories(outputs_dir: str) -> list[str]:
@@ -209,26 +213,38 @@ def render_inference_page(title: str = "Inference") -> None:
         mask = threshold_mask(res["heatmap"], mode=mask_mode, manual_threshold=manual_thr) if res["heatmap"] is not None else None
         return {**res, "overlay_bgr": overlay, "mask_uint8": mask}
 
-    uploaded_files = st.file_uploader(
+    uploaded_files_widget = st.file_uploader(
         "Upload image(s)",
         type=["png", "jpg", "jpeg", "bmp", "tif", "tiff"],
         accept_multiple_files=True,
+        key="main_image_uploader",
     )
-    if not uploaded_files:
+
+    uploaded_entries: List[Dict[str, Any]] = []
+    if uploaded_files_widget:
+        for uf in uploaded_files_widget:
+            data = uf.getvalue() if hasattr(uf, "getvalue") else uf.read()
+            if data:
+                uploaded_entries.append({"name": uf.name, "bytes": data})
+        st.session_state["uploaded_entries"] = uploaded_entries
+    else:
+        uploaded_entries = st.session_state.get("uploaded_entries", [])
+
+    if not uploaded_entries:
         st.info("Upload one or more images to run anomaly detection.")
         return
 
-    if len(uploaded_files) == 1:
-        uploaded = uploaded_files[0]
+    if len(uploaded_entries) == 1:
+        uploaded = uploaded_entries[0]
         try:
-            bgr = _read_image(uploaded)
+            bgr = _decode_image_bytes(uploaded["bytes"])
         except Exception as e:
             st.error(str(e))
             return
 
-        file_bytes = uploaded.getvalue() if hasattr(uploaded, "getvalue") else b""
+        file_bytes = uploaded.get("bytes", b"")
         cache_key = (
-            hashlib.md5(file_bytes).hexdigest() if file_bytes else uploaded.name,
+            hashlib.md5(file_bytes).hexdigest() if file_bytes else uploaded.get("name", ""),
             tuple(sorted(selected_methods)),
             patchcore_category,
             winclip_prompt_hint,
@@ -290,13 +306,13 @@ def render_inference_page(title: str = "Inference") -> None:
                     st.image(res["mask_uint8"], width="stretch")
         return
 
-    st.subheader(f"Batch inference ({len(uploaded_files)} images)")
+    st.subheader(f"Batch inference ({len(uploaded_entries)} images)")
     decoded_images: List[np.ndarray | None] = []
     image_names: List[str] = []
-    for uf in uploaded_files:
-        image_names.append(uf.name)
+    for uf in uploaded_entries:
+        image_names.append(str(uf.get("name", "upload")))
         try:
-            decoded_images.append(_read_image(uf))
+            decoded_images.append(_decode_image_bytes(uf["bytes"]))
         except Exception:
             decoded_images.append(None)
 
@@ -339,7 +355,7 @@ def render_inference_page(title: str = "Inference") -> None:
                         zf.writestr(f"{method_name}/{Path(img_name).stem}_error.txt", str(e))
             except Exception as e:
                 zf.writestr(f"{Path(img_name).stem}_error.txt", str(e))
-            prog.progress(int(i / len(uploaded_files) * 100))
+            prog.progress(int(i / len(uploaded_entries) * 100))
 
     results_zip.seek(0)
     st.download_button(
