@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import streamlit as st
 
 from surfaceguard.utils.config import load_yaml
+from surfaceguard.utils.hf_patchcore import ensure_patchcore_tree_from_hub
 from surfaceguard.ui.inference_view import render_inference_page
 
 
@@ -53,15 +55,32 @@ def _auto_detect_outputs_dir(configured: str) -> str:
 
 
 def main() -> None:
-    st.set_page_config(page_title="SurfaceGuard", layout="wide")
-
-    cfg_path = Path("configs/app.yaml")
+    repo_root = Path(__file__).resolve().parents[1]
+    cfg_path = repo_root / "configs" / "app.yaml"
     if cfg_path.exists():
-        cfg = load_yaml(cfg_path)
+        cfg = load_yaml(str(cfg_path))
     else:
         cfg = {"app": {"outputs_dir": "outputs"}}
 
-    configured_outputs = str(cfg["app"].get("outputs_dir", "outputs"))
+    app_cfg = cfg.get("app", {})
+    configured_outputs = str(app_cfg.get("outputs_dir", "outputs"))
+    outputs_root = repo_root / configured_outputs
+
+    hf_repo = (
+        os.environ.get("SURFACEGUARD_HF_REPO_ID", "").strip()
+        or str(app_cfg.get("hf_patchcore_repo", "") or "").strip()
+    )
+    if hf_repo:
+        ok = ensure_patchcore_tree_from_hub(hf_repo, outputs_root)
+        if not ok:
+            raise RuntimeError(
+                "Could not load PatchCore checkpoints from Hugging Face Hub. "
+                "Upload the full patchcore/ tree (same layout as outputs/patchcore/). "
+                "Check repo id, HF_TOKEN for private repos, and network access."
+            )
+
+    st.set_page_config(page_title="SurfaceGuard", layout="wide")
+
     st.session_state.setdefault("outputs_dir", _auto_detect_outputs_dir(configured_outputs))
 
     st.title("SurfaceGuard")
