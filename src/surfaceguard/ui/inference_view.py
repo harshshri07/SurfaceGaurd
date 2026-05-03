@@ -55,13 +55,16 @@ def render_inference_page(title: str = "Inference") -> None:
         is_hf_space = bool(os.getenv("SPACE_ID") or os.getenv("HF_SPACE_ID"))
         default_methods = ["patchcore"] if is_hf_space else ["patchcore", "winclip"]
         selected_methods = st.multiselect(
-            "Methods (side-by-side)",
+            "Methods",
             ["patchcore", "winclip", "hybrid"],
             default=default_methods,
         )
         if not selected_methods:
             st.warning("Select at least one method.")
             return
+        if is_hf_space and len(selected_methods) > 1:
+            st.warning("HF Space stability mode: running one method at a time.")
+            selected_methods = [selected_methods[0]]
 
         outputs_dir = st.session_state.get("outputs_dir", "outputs")
         patchcore_category = "auto"
@@ -71,7 +74,11 @@ def render_inference_page(title: str = "Inference") -> None:
             outputs_dir = st.text_input("Outputs dir", value=outputs_dir)
             trained_for_advanced = _trained_patchcore_categories(outputs_dir)
             if ("patchcore" in selected_methods or "hybrid" in selected_methods) and trained_for_advanced:
-                patchcore_category = st.selectbox("PatchCore category", ["auto"] + trained_for_advanced, index=0)
+                if is_hf_space:
+                    # Avoid loading many category checkpoints on low-memory Spaces.
+                    patchcore_category = st.selectbox("PatchCore category", trained_for_advanced, index=0)
+                else:
+                    patchcore_category = st.selectbox("PatchCore category", ["auto"] + trained_for_advanced, index=0)
             if "winclip" in selected_methods or "hybrid" in selected_methods:
                 winclip_prompt_hint = st.text_input("WinCLIP prompt hint (optional)", value="auto")
         st.session_state["outputs_dir"] = outputs_dir
@@ -118,6 +125,8 @@ def render_inference_page(title: str = "Inference") -> None:
     def _run_patchcore(image_bgr: np.ndarray) -> Dict[str, Any]:
         chosen_category = patchcore_category
         if chosen_category == "auto":
+            if is_hf_space:
+                raise RuntimeError("PatchCore auto category scan is disabled on HF Space for stability. Select a category.")
             if not trained:
                 raise FileNotFoundError("No PatchCore checkpoints found under outputs/patchcore/")
             best_score = None
@@ -296,7 +305,7 @@ def render_inference_page(title: str = "Inference") -> None:
         with input_cols[1]:
             st.image(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB), width="stretch")
 
-        st.subheader("Results (side-by-side)")
+        st.subheader("Results")
         method_cols = st.columns(len(results))
         for idx, res in enumerate(results):
             with method_cols[idx]:
