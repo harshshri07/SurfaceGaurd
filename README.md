@@ -1,13 +1,3 @@
----
-title: SurfaceGuard
-emoji: 🔍
-colorFrom: blue
-colorTo: indigo
-sdk: docker
-app_port: 8501
-pinned: false
----
-
 ## SurfaceGuard (PatchCore + WinCLIP + Streamlit)
 
 Industrial surface anomaly detection and localization with a deployable Streamlit UI.
@@ -19,22 +9,19 @@ Industrial surface anomaly detection and localization with a deployable Streamli
 - **UI**: side-by-side model comparison (PatchCore, WinCLIP, Hybrid) and benchmark runner.
 - **Deployment**: **Hugging Face Docker Spaces** — live inference with uploads in the browser.
 
-### Course option (this repo): Hugging Face Docker Space
+### Demo: Hugging Face Docker Space
 
-This project is deployed as a **Hugging Face Space using Docker SDK**.
+This project is deployed as a **Hugging Face Space using Docker SDK** at: **https://huggingface.co/spaces/rishabh00/surfaceguard**
 
-### Course submission (per grader instructions)
+**PatchCore checkpoints (rubric “model”):** PatchCore is **not** a single PyTorch `.pt` file. Each **category** has **two** files that belong together: `memory.npz` (patch memory bank) and `meta.yaml` (settings + threshold), under `outputs/patchcore/<category>/`.
 
-**PatchCore checkpoints (rubric “model”):** PatchCore is **not** a single PyTorch `.pt` file. Each **category** has **two** files that belong together: `memory.npz` (patch memory bank) and `meta.yaml` (settings + threshold), under `outputs/patchcore/<category>/`. The course may ask for one final submission checkpoint — that means **one category folder** in the zip, or the same structure on the Hub. **Merging all categories into one file** would require changing the training and loading code (not how PatchCore is implemented here).
+**Hugging Face Model repo layout:** upload the same tree you have locally, e.g. `patchcore/bottle/...`, `patchcore/cable/...`, for every category you trained. The app **syncs the whole `patchcore/**` tree** from the Hub when `outputs/patchcore` is empty, so **PatchCore “auto”** (pick best category after upload) works as before. Set **`hf_patchcore_repo`** in `configs/app.yaml` (or **`SURFACEGUARD_HF_REPO_ID`** on the Space). 
 
-**Hugging Face Model repo layout:** upload the same tree you have locally, e.g. `patchcore/bottle/...`, `patchcore/cable/...`, for every category you trained. The app **syncs the whole `patchcore/**` tree** from the Hub when `outputs/patchcore` is empty, so **PatchCore “auto”** (pick best category after upload) works as before. Set **`hf_patchcore_repo`** in `configs/app.yaml` (or **`SURFACEGUARD_HF_REPO_ID`** on the Space). Private repos: **`HF_TOKEN`**.
-
-**WinCLIP (no separate trained file from you):** WinCLIP uses **OpenCLIP** pretrained weights (`ViT-B-32`, LAION). There is **no** large custom WinCLIP checkpoint like PatchCore’s `memory.npz`. Those weights **download automatically** when WinCLIP runs (cached after first use). You do **not** upload a second “WinCLIP model file” unless you customize the code to save one — the course demo only requires **PatchCore on Hub** for your trained artifact.
-
+**WinCLIP (no separate trained file):** WinCLIP uses **OpenCLIP** pretrained weights (`ViT-B-32`, LAION). There is **no** large custom WinCLIP checkpoint like PatchCore’s `memory.npz`. Those weights **download automatically** when WinCLIP runs (cached after first use).
 
 ---
 
-### Quick run (≤4 steps, shows outcome)
+### Quick run (≤4 steps)
 
 1. **Clone or unzip** this repository (code only in the zip).
 2. **Install** dependencies and the local package:
@@ -48,7 +35,7 @@ This project is deployed as a **Hugging Face Space using Docker SDK**.
 
 Alternatively, after step 2 (and model present or HF configured): `streamlit run app/Home.py`
 
-Open the URL shown in the terminal (default **http://127.0.0.1:8501**).
+Open the URL shown in the terminal.
 
 ### Folder layout
 - `src/surfaceguard/`: library code
@@ -147,7 +134,7 @@ These assume your venv is in `.\.venv\`:
 .\scripts\eval_winclip.ps1    -Category bottle
 ```
 
-### Trained PatchCore weights (not in this git repo)
+### Trained PatchCore weights
 
 Large **`memory.npz`** files are **gitignored** here so pushes stay small (GitHub / Hugging Face Spaces). After training locally you get `outputs/patchcore/<category>/`; upload that tree to a **Hugging Face Model** repo (see above) and set **`hf_patchcore_repo`** / **`SURFACEGUARD_HF_REPO_ID`** so the app downloads weights at runtime.
 
