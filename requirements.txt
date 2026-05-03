@@ -4,7 +4,7 @@ pandas
 tqdm
 pyyaml
 pillow
-# Headless build: no libGL dependency (required for Streamlit Cloud / Docker slim)
+# Headless OpenCV: no libGL (Linux servers / Hugging Face Spaces)
 opencv-python-headless
 matplotlib
 scikit-learn
@@ -17,6 +17,8 @@ timm
 streamlit
 
 open_clip_torch
+
+huggingface_hub>=0.23
 
 # Local package (required for `import surfaceguard` on Streamlit Cloud, CI, etc.)
 -e .

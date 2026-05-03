@@ -73,8 +73,7 @@ def render_inference_page(title: str = "Inference") -> None:
                 st.caption("PatchCore reads checkpoints from outputs/patchcore/<category>/.")
             else:
                 st.warning(
-                    "No PatchCore checkpoints found. Train first (example): "
-                    "python tools\\train_patchcore.py --category bottle"
+                    "No PatchCore checkpoints found under outputs/patchcore/. Train first or configure Hugging Face Hub sync."
                 )
 
         if "winclip" in selected_methods or "hybrid" in selected_methods:

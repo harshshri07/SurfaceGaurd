@@ -10,6 +10,10 @@ import torch.nn.functional as F
 from sklearn.neighbors import NearestNeighbors
 from torchvision import models as tvm
 
+# One backbone instance per (name, device) when not using per-engine INT8 quantization.
+# Avoids loading N copies of Wide ResNet when multiple PatchCore categories are used (e.g. Streamlit "auto").
+_SHARED_BACKBONES: Dict[Tuple[str, str], torch.nn.Module] = {}
+
 
 def _prepare_quant_backend() -> bool:
     supported = [e for e in torch.backends.quantized.supported_engines if e != "none"]
@@ -31,6 +35,31 @@ def _build_backbone(name: str) -> torch.nn.Module:
         model = fn(pretrained=True)
     model.eval()
     return model
+
+
+def _get_shared_backbone(backbone_name: str, device: torch.device, enable_int8: bool) -> Tuple[torch.nn.Module, bool]:
+    """
+    INT8 path builds a dedicated backbone (quantization mutates weights; do not share).
+    FP32 path shares one torchvision backbone across PatchCore engines on the same device.
+    Returns (module, whether dynamic INT8 is active).
+    """
+    use_quant = bool(enable_int8 and device.type == "cpu")
+    if use_quant:
+        bb = _build_backbone(backbone_name).to(device)
+        bb.eval()
+        try:
+            if _prepare_quant_backend():
+                bb = torch.ao.quantization.quantize_dynamic(bb, {torch.nn.Linear}, dtype=torch.qint8)
+                return bb, True
+        except Exception:
+            pass
+        return bb, False
+    key = (backbone_name, str(device))
+    if key not in _SHARED_BACKBONES:
+        m = _build_backbone(backbone_name).to(device)
+        m.eval()
+        _SHARED_BACKBONES[key] = m
+    return _SHARED_BACKBONES[key], False
 
 
 @torch.no_grad()
@@ -109,20 +138,7 @@ class PatchCoreEngine:
     def __init__(self, state: PatchCoreState, device: torch.device, enable_int8: bool = False) -> None:
         self.state = state
         self.device = device
-        self.backbone = _build_backbone(state.backbone).to(device)
-        self.enable_int8 = bool(enable_int8 and device.type == "cpu")
-        if self.enable_int8:
-            # Dynamic quantization targets Linear layers and is safe for post-training CPU inference.
-            # Some builds (e.g., NoQEngine) do not support quantized ops; fallback to FP32 gracefully.
-            try:
-                if _prepare_quant_backend():
-                    self.backbone = torch.ao.quantization.quantize_dynamic(
-                        self.backbone, {torch.nn.Linear}, dtype=torch.qint8
-                    )
-                else:
-                    self.enable_int8 = False
-            except Exception:
-                self.enable_int8 = False
+        self.backbone, self.enable_int8 = _get_shared_backbone(state.backbone, device, enable_int8)
         self.nn = NearestNeighbors(n_neighbors=state.nn_k, algorithm="auto")
         self.nn.fit(state.memory)
 

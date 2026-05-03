@@ -3,4 +3,6 @@ app:
   default_dataset_root: data/mvtec_ad
   default_category: bottle
   default_method: patchcore
+  # If outputs/patchcore is empty (e.g. fresh Space): sync entire patchcore/** tree from this Hub Model repo.
+  hf_patchcore_repo: ""
 
