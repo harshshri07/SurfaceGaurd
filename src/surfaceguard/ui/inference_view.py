@@ -226,9 +226,6 @@ def render_inference_page(title: str = "Inference") -> None:
             data = uf.getvalue() if hasattr(uf, "getvalue") else uf.read()
             if data:
                 uploaded_entries.append({"name": uf.name, "bytes": data})
-        st.session_state["uploaded_entries"] = uploaded_entries
-    else:
-        uploaded_entries = st.session_state.get("uploaded_entries", [])
 
     if not uploaded_entries:
         st.info("Upload one or more images to run anomaly detection.")
@@ -236,51 +233,55 @@ def render_inference_page(title: str = "Inference") -> None:
 
     if len(uploaded_entries) == 1:
         uploaded = uploaded_entries[0]
-        try:
-            bgr = _decode_image_bytes(uploaded["bytes"])
-        except Exception as e:
-            st.error(str(e))
-            return
-
         file_bytes = uploaded.get("bytes", b"")
-        cache_key = (
-            hashlib.md5(file_bytes).hexdigest() if file_bytes else uploaded.get("name", ""),
-            tuple(sorted(selected_methods)),
-            patchcore_category,
-            winclip_prompt_hint,
-            win_stride,
-            blur_sigma,
-            hybrid_alpha,
-            hybrid_threshold,
-            mask_mode,
-            manual_thr,
-            enable_int8,
-        )
+        file_hash = hashlib.md5(file_bytes).hexdigest() if file_bytes else uploaded.get("name", "")
         run_single = st.button("Run inference", type="primary", key="run_single_inference")
-        single_cache: Dict[Any, Any] = st.session_state.setdefault("single_infer_cache", {})
-        cached_payload = single_cache.get(cache_key)
+
         if run_single:
+            try:
+                bgr_run = _decode_image_bytes(file_bytes)
+            except Exception as e:
+                st.error(str(e))
+                return
             with st.spinner("Running inference..."):
                 results = []
                 method_errors = {}
                 for method_name in selected_methods:
                     try:
-                        results.append(_run_method(method_name, bgr))
+                        results.append(_run_method(method_name, bgr_run))
                     except Exception as e:
                         method_errors[method_name] = str(e)
-            single_cache[cache_key] = {"results": results, "method_errors": method_errors}
-            cached_payload = single_cache.get(cache_key)
+            st.session_state["single_last_render"] = {
+                "file_hash": file_hash,
+                "file_bytes": file_bytes,
+                "results": results,
+                "method_errors": method_errors,
+            }
 
-        if cached_payload is None:
+        last_render: Dict[str, Any] | None = st.session_state.get("single_last_render")
+        if last_render is None:
             st.info("Click **Run inference** to generate results.")
-            st.subheader("Input")
-            input_cols = st.columns([1, 2, 1])
-            with input_cols[1]:
-                st.image(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB), width="stretch")
+            try:
+                bgr_preview = _decode_image_bytes(file_bytes)
+                st.subheader("Input")
+                input_cols = st.columns([1, 2, 1])
+                with input_cols[1]:
+                    st.image(cv2.cvtColor(bgr_preview, cv2.COLOR_BGR2RGB), width="stretch")
+            except Exception:
+                pass
             return
 
-        results = cached_payload["results"]
-        method_errors = cached_payload["method_errors"]
+        if last_render.get("file_hash") != file_hash:
+            st.info("New image selected. Click **Run inference** to update results.")
+
+        try:
+            bgr = _decode_image_bytes(last_render["file_bytes"])
+        except Exception as e:
+            st.error(str(e))
+            return
+
+        results = last_render.get("results", [])
+        method_errors = last_render.get("method_errors", {})
 
         if method_errors:
             st.warning("Some selected methods failed. Showing available results.")
