@@ -40,6 +40,22 @@ def _minmax_norm(x: np.ndarray | None) -> np.ndarray | None:
     return (x - lo) / (hi - lo)
 
 
+def _confidence_level(method: str, decision_margin: float) -> str:
+    m = abs(float(decision_margin))
+    if method == "patchcore":
+        if m < 0.03:
+            return "low"
+        if m < 0.10:
+            return "medium"
+        return "high"
+    # winclip/hybrid margins tend to be smaller near decision boundary.
+    if m < 0.01:
+        return "low"
+    if m < 0.05:
+        return "medium"
+    return "high"
+
+
 def render_inference_page(title: str = "Inference") -> None:
     st.header(title)
 
@@ -143,6 +159,8 @@ def render_inference_page(title: str = "Inference") -> None:
             "method": "patchcore",
             "label": "defective" if score >= threshold else "normal",
             "score": score,
+            "decision_threshold": threshold,
+            "decision_margin": score - threshold,
             "heatmap": heatmap,
             "checkpoint_used": chosen_category,
         }
@@ -165,6 +183,8 @@ def render_inference_page(title: str = "Inference") -> None:
             "method": "winclip",
             "label": out["label"],
             "score": float(out["score"]),
+            "decision_threshold": 0.0,
+            "decision_margin": float(out["score"]),
             "heatmap": heatmap,
             "checkpoint_used": None,
         }
@@ -187,6 +207,8 @@ def render_inference_page(title: str = "Inference") -> None:
             "method": "hybrid",
             "label": "defective" if score >= hybrid_threshold else "normal",
             "score": score,
+            "decision_threshold": hybrid_threshold,
+            "decision_margin": score - hybrid_threshold,
             "heatmap": comb,
             "checkpoint_used": pc.get("checkpoint_used"),
             "components": {"patchcore_score": pc["score"], "winclip_score": wc["score"]},
@@ -228,7 +250,7 @@ def render_inference_page(title: str = "Inference") -> None:
         st.subheader("Input")
         input_cols = st.columns([1, 1])
         with input_cols[0]:
-            st.image(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB), width="stretch")
+            st.image(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB), width=420)
 
         st.subheader("Results")
         method_cols = st.columns(len(results))
@@ -238,15 +260,16 @@ def render_inference_page(title: str = "Inference") -> None:
                 prediction = str(res["label"]).title()
                 score_text = f"{float(res['score']):.4f}"
                 pred_color = "#ef4444" if str(res["label"]).lower() == "defective" else "#22c55e"
+                confidence = _confidence_level(str(res["method"]), float(res.get("decision_margin", 0.0)))
                 st.markdown(
                     f"Prediction: <span style='color:{pred_color}; font-weight:700;'>{prediction}</span> | "
-                    f"Score: <b>{score_text}</b>",
+                    f"Score: <b>{score_text}</b> | Confidence: <b>{confidence}</b>",
                     unsafe_allow_html=True,
                 )
-                st.image(cv2.cvtColor(res["overlay_bgr"], cv2.COLOR_BGR2RGB), width="stretch")
+                st.image(cv2.cvtColor(res["overlay_bgr"], cv2.COLOR_BGR2RGB), width=420)
                 if res.get("mask_uint8") is not None:
                     st.caption("Binary mask")
-                    st.image(res["mask_uint8"], width="stretch")
+                    st.image(res["mask_uint8"], width=420)
         return
 
     st.subheader(f"Batch inference ({len(uploaded_files)} images)")
